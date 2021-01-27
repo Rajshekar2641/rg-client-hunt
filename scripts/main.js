@@ -1,57 +1,84 @@
+
 import locationsArray from '../init-locations.js';
 
-const inside = (device, bounds) => {
-  const ans =
-    device.latitude > bounds.South &&
-    device.latitude < bounds.North &&
-    device.longitude > bounds.West &&
-    device.longitude < bounds.East;
-  return ans;
-};
+let locationElement = document.getElementById("location");
 
-export default function getLocation() {
-  if (!navigator.geolocation) {
-    document.querySelector('#error-message').innerHTML =
-      'Browser does not support geolocation.';
-  } else {
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0,
-    };
+window.addEventListener('load', main);
+locationElement.addEventListener('click', locationHandler);
+locationElement.addEventListener('touch', locationHandler);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        document.querySelector('#device-lat').innerHTML = '';
-        document.querySelector('#device-long').innerHTML = '';
-        document.querySelector('#locationAnswer').innerHTML = 'THE HUNT GAME';
-
-        if (position === undefined) {
-          document.querySelector('#error-message').innerHTML =
-            'Browser cannot determine device position (position is undefined).';
-        }
-        const device = position.coords;
-        document.querySelector('#device-lat').innerHTML = device.latitude;
-        document.querySelector('#device-long').innerHTML = device.longitude;
-        const arrayLength = locationsArray.length;
-        for (let i = 0; i < arrayLength; i += 1) {
-          const thisLoc = locationsArray[i];
-          if (inside(device, thisLoc)) {
-            const name = thisLoc.Name;
-            document.querySelector('#locationAnswer').innerHTML = name;
-            const utterance = new SpeechSynthesisUtterance();
-            utterance.text = `Congratulations! You found location ${name}`;
-            window.speechSynthesis.speak(utterance);
-            break;
-          }
-        }
-      },
-      (err) => {
-        const s = `ERROR(${err.code}): ${err.message}`;
-        console.warn(s);
-        document.querySelector('#error-message').innerHTML = err.message;
-      },
-      options,
-    );
-  }
+function main() {
+    console.log('Page is fully loaded');
 }
+
+let currentlat;
+let currentlon;
+let error = true;
+
+// getLocation() function is used to collect the current location
+async function getLocation() {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+    }).then(position => {
+        return position;
+    });
+}
+
+//the locationHandler() function checksout the current location and compares it with the 
+//init-locations.
+
+async function locationHandler() {
+    let locText = await getLocation();
+    currentlat = locText.coords.latitude;
+    document.getElementById("device-lat").innerHTML = "This is about device-lat: " + currentlat.toFixed(6);
+    currentlon = locText.coords.longitude;
+    document.getElementById("device-long").innerHTML = "This is about device-long: " + currentlon.toFixed(6);
+
+    locationsArray.forEach(function (value) {
+        if (isInside(value.Latitude, value.Longitude)) {
+            document.getElementById("locationAnswer").innerHTML = value.Name;
+            error = false;
+        }
+    });
+
+    // In case of any error where if the device is not 30m range it displays error.
+
+    if(error) {
+        document.getElementById("error-message").innerHTML = "You're not in range of 30m.";
+    } else {
+        document.getElementById("error-message").innerHTML = "";
+    }
+}
+
+
+//checking if distance is in 30m range.
+
+
+function isInside(questLat, questLon) {
+    let distance = distanceBetweenLocations(questLat, questLon);
+    console.log("distance: " + distance);
+    if (distance < 30) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+//distance between the lat-long points.
+function distanceBetweenLocations(questLat, questLon) {
+    const R = 6371e3;
+    const φ1 = currentlat * Math.PI / 180;
+    const φ2 = questLat * Math.PI / 180;
+    const Δφ = (questLat - currentlat) * Math.PI / 180;
+    const Δλ = (questLon - currentlon) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const d = R * c;
+    return d; 
+}
+
+
