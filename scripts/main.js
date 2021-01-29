@@ -37,6 +37,8 @@ async function locationHandler() {
     locationsArray.forEach(function (value) {
         if (isInside(value.Latitude, value.Longitude)) {
             document.getElementById("locationAnswer").innerHTML = value.Name;
+            let speech = new SpeechSynthesisUtterance("You have reached the destination. Welcome to " + value.Name);
+            speechSynthesis.speak(speech);
             error = false;
         }
     });
@@ -44,7 +46,10 @@ async function locationHandler() {
     // In case of any error where if the device is not 30m range it displays error.
 
     if(error) {
-        document.getElementById("error-message").innerHTML = "You're not in range of 30m.";
+        let innerHTML = "You're not in 30 meters range to any place.";
+        document.getElementById("error-message").innerHTML = innerHTML;
+        let speech = new SpeechSynthesisUtterance(innerHTML);
+        speechSynthesis.speak(speech);
     } else {
         document.getElementById("error-message").innerHTML = "";
     }
